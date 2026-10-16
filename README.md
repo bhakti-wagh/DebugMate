@@ -122,19 +122,6 @@ python -m unittest discover -s tests -v
 
 `test_diagnosis.py` exercises the rule engine. `test_database.py` uses mocks and does not need a live MySQL server. `test_app.py` exercises Flask routes and does not need MySQL because its database calls are patched in route cases; it does require Flask to be installed. A skipped test is not a passing verification of that behavior. Check the command output for skips and failures.
 
-## Screenshot and demonstration instructions
-
-After Flask and MySQL are configured and running:
-
-1. Open the home page and capture a screenshot showing the DebugMate title and error input form.
-2. Paste `NameError: name 'score' is not defined`, select **Analyze Error**, and capture the detected type, explanation, causes, and suggested next step.
-3. Submit an unfamiliar exception line such as `CustomProblem: example` and capture the unknown-rule result.
-4. Submit an incomplete traceback and capture the malformed-traceback message.
-5. Open `/history` and capture a saved analysis. Open `/dashboard` and capture the total and counts by error type.
-6. For a short live demonstration, explain the flow: POST form → `diagnose()` string matching → parameterized database insert → history/dashboard query.
-
-Use your operating system's screenshot shortcut. Save screenshots in a project presentation folder if your evaluator requests them. Do not include passwords, environment variable values, or private data in screenshots. If MySQL is not running, demonstrate diagnosis but label history/dashboard as unavailable rather than implying they were tested.
-
 ## Current verification caveat
 
 At the time the project report was prepared, the available Python environment did not have Flask installed. The most recent full test run discovered 22 tests: 12 passed, and 10 Flask route tests were skipped. The passing tests included all seven diagnosis tests and all five mocked database tests. No live MySQL server or installed connector was used to verify a database connection. See `docs/project_report.md` for the exact recorded result and limitations.
