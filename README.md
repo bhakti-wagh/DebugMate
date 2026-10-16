@@ -1,60 +1,72 @@
-# DebugMate — Python Error Diagnosis and Learning Assistant
+# DebugMate
 
-DebugMate is a small learning web application for people who are beginning to use Python. A user pastes a Python exception line or traceback. Hand-written rules identify selected exception types and show a plain-language explanation, likely causes, and a next step. The application can save analyses to MySQL and show saved history and summary counts.
+### Python Error Diagnosis and Learning Assistant
 
-This is a student learning project. It does not guarantee that it can find the root cause of every error, and this repository does not imply official NSDC approval or certification.
+DebugMate is a beginner-friendly web application for understanding common Python errors. Paste an exception message or traceback to see a rule-based explanation, likely causes, and a suggested next step. When MySQL is configured, DebugMate also saves analysis history and displays a dashboard.
 
-## Features in the current code
+This is a student learning project. Its suggestions are educational hints, not guaranteed fixes. The project does not claim official NSDC approval or certification.
 
-- Rule-based diagnosis for `NameError`, `TypeError`, `ValueError`, `IndexError`, `KeyError`, `ZeroDivisionError`, `AttributeError`, `ImportError`, `ModuleNotFoundError`, and `SyntaxError`.
-- Extraction of the last supported exception line from pasted traceback text.
-- Separate responses for blank/non-text input, malformed tracebacks, unrecognized text, and unrecognized named exception types.
-- A Flask form submitted with `POST` and HTML templates that auto-escape submitted text.
-- No execution, evaluation, compilation, or import of submitted Python code.
-- MySQL history storage through parameterized queries, with a recent-history page and dashboard totals.
-- Friendly database-unavailable messages so diagnosis output can still be shown when saving fails.
+## What it does
 
-The code saves non-empty outcomes including supported, unknown, and malformed diagnoses. It does not save invalid/empty input. The history query is capped at 50 by default; the database function allows a caller-supplied limit up to 200.
+- Recognizes `NameError`, `TypeError`, `ValueError`, `IndexError`, `KeyError`, `ZeroDivisionError`, `AttributeError`, `ImportError`, `ModuleNotFoundError`, and `SyntaxError`.
+- Extracts a supported exception name and message from pasted traceback text when possible.
+- Gives separate responses for empty input, malformed tracebacks, and errors without a matching rule.
+- Shows an analysis form, an Overview dashboard, and a searchable recent History page.
+- Stores non-empty diagnoses in MySQL, including unknown and malformed results. Empty or invalid submissions are not saved.
+- Uses parameterized SQL and reads database settings from environment variables.
+- Treats submitted content as text. It never runs, evaluates, compiles, or imports user-submitted code.
+- Shows a useful message when the database is unavailable; diagnosis can still be displayed, but it cannot be saved at that time.
 
-## Technologies
+## Pages
 
-- Python
-- Flask and Jinja templates
-- HTML, CSS, Bootstrap 5.3.3 (loaded from a CDN by the browser)
+| Page | URL | Purpose |
+| --- | --- | --- |
+| Overview | `/dashboard` | Database-backed totals, recognized and uncertain counts, an error-type breakdown, and recent analyses. |
+| Analyze Error | `/` | Accepts an error message or traceback through a POST form and displays the diagnosis. |
+| History | `/history` | Shows up to 50 recent analyses, with client-side search and expandable details. |
+
+## Built with
+
+- Python and Flask
 - MySQL and `mysql-connector-python`
-- Python standard-library `unittest` and `unittest.mock`
+- HTML, CSS, Bootstrap 5 (stylesheet loaded from a CDN)
+- Jinja templates
+- Python's built-in `unittest` and `unittest.mock`
 
-## Project structure
+## Project layout
 
 ```text
 DebugMate/
-├── app.py                    # Flask application factory and web routes
-├── database.py               # MySQL connection and history/statistics queries
-├── diagnosis.py              # Standalone rule-based diagnosis function
-├── requirements.txt          # Flask and MySQL Connector dependencies
-├── schema.sql                # Creates debugmate_db and debug_history
-├── .env.example              # Names of settings with placeholder values only
-├── .gitignore                # Excludes .env, bytecode, and local virtual environments
-├── docs/
-│   ├── development_plan.md   # Earlier three-day development checklist
-│   ├── project_report.md     # Certificate evaluation project report
-│   ├── requirements.md       # Project objectives and requirements
-│   ├── system_design.md      # Architecture notes
-│   └── viva_questions.md    # Practice evaluation questions and answers
-├── static/css/style.css      # Small project-specific styles
-├── templates/
-│   ├── dashboard.html        # Total analyses and counts by error type
-│   ├── history.html          # Recent saved analyses
-│   └── index.html            # Diagnosis form and result
-└── tests/
-    ├── test_app.py           # Flask route tests (require Flask)
-    ├── test_database.py      # Mock-based database tests (no MySQL server)
-    └── test_diagnosis.py     # Diagnosis rule tests
+|-- app.py                  # Flask application factory and routes
+|-- diagnosis.py            # Standalone rule-based diagnosis engine
+|-- database.py             # Environment-based MySQL connection and queries
+|-- requirements.txt        # Python package requirements
+|-- schema.sql              # Creates debugmate_db and debug_history
+|-- .env.example            # Environment variable names with placeholder values
+|-- .gitignore              # Ignores local secrets, bytecode, and virtual environments
+|-- docs/
+|   |-- development_plan.md
+|   |-- project_report.md
+|   |-- requirements.md
+|   |-- system_design.md
+|   `-- viva_questions.md
+|-- static/
+|   |-- css/style.css       # Responsive application styles
+|   `-- js/history.js       # Client-side filtering of the recent history list
+|-- templates/
+|   |-- base.html           # Shared navigation and page layout
+|   |-- dashboard.html      # Overview dashboard
+|   |-- history.html        # Recent analysis history
+|   `-- index.html          # Error form and diagnosis results
+`-- tests/
+    |-- test_app.py         # Flask route tests
+    |-- test_database.py    # Database tests using mocks
+    `-- test_diagnosis.py   # Diagnosis engine tests
 ```
 
-## Installation
+## Set up the project
 
-Use a terminal opened in the project folder. Create and activate a virtual environment if desired, then install the declared dependencies:
+Open PowerShell in the project folder. Create and activate a virtual environment, then install the listed packages:
 
 ```powershell
 python -m venv .venv
@@ -62,21 +74,27 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-The app and Flask route tests need Flask. Saving or reading history also needs a reachable MySQL server and `mysql-connector-python`. Do not install packages into a different Python environment than the one used to start DebugMate.
+If PowerShell blocks virtual-environment activation, you can run its Python directly:
 
-## MySQL configuration
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
 
-The database module reads these process environment variables:
+Use the same Python environment to run the application and tests. The project does not install packages automatically.
 
-| Variable | Meaning | Example value |
-| --- | --- | --- |
-| `DB_HOST` | MySQL server address | `localhost` |
-| `DB_PORT` | MySQL port (optional; defaults to `3306`) | `3306` |
-| `DB_NAME` | Database name | `debugmate_db` |
-| `DB_USER` | MySQL account name | Set your own account |
-| `DB_PASSWORD` | Password for that account | Set privately in your environment |
+## Configure MySQL
 
-`.env.example` is a reference containing placeholders; the application does **not** automatically read a `.env` file. Set variables in the shell or your operating system's environment settings. Example for PowerShell (replace the user and password locally; do not commit them):
+Start a MySQL server. The database module reads these environment variables:
+
+| Variable | Required? | Description | Typical local value |
+| --- | --- | --- | --- |
+| `DB_HOST` | Yes | MySQL server host | `localhost` |
+| `DB_PORT` | No | MySQL server port; defaults to `3306` | `3306` |
+| `DB_NAME` | Yes | Database name | `debugmate_db` |
+| `DB_USER` | Yes | MySQL username | Your local MySQL account |
+| `DB_PASSWORD` | Yes | Password for that account | Set privately in your environment |
+
+`.env.example` documents the variable names, but the application does not automatically load a `.env` file. Set the values in the shell before starting the app. For example:
 
 ```powershell
 $env:DB_HOST = "localhost"
@@ -86,42 +104,58 @@ $env:DB_USER = "your_mysql_username"
 $env:DB_PASSWORD = "your_local_password"
 ```
 
-The `.gitignore` excludes a file named `.env`, but secrets should still be handled carefully and never placed in Python source or `.env.example`.
+Replace the example username and password with your own values. Do not put real credentials in source code, `.env.example`, screenshots, or Git commits. A real `.env` file is excluded by `.gitignore`, but it is not read by the current application.
 
-## Database setup
+## Create the database and table
 
-Start your MySQL server and run the schema script once using a MySQL account that is allowed to create a database and table. For example, in PowerShell with the MySQL command-line client installed:
+Run `schema.sql` once with a MySQL account permitted to create databases and tables. The script creates database `debugmate_db` and table `debug_history`. The table stores an auto-increment ID, error type, submitted error text, explanation, suggested fix, diagnosis status, and a timestamp generated by MySQL. The Flask app does not create the schema automatically.
+
+One way to run the script with the MySQL command-line client is:
 
 ```powershell
-mysql -u your_mysql_username -p < schema.sql
+mysql -u your_mysql_username -p
 ```
 
-Enter the password when the client prompts. The script creates `debugmate_db` and the `debug_history` table. The table stores an ID, error type, submitted error text, explanation, suggested fix, status, and database-generated timestamp. The application does not create the database automatically.
+After entering the password at the prompt, run the schema file from the MySQL prompt (replace the path if your project is elsewhere):
 
-Configure the application's `DB_USER` and `DB_PASSWORD` with credentials that can connect to and write to `debugmate_db`. For safer deployments, grant only the database permissions the application needs; the setup account that creates the schema can be separate.
+```sql
+SOURCE C:/Users/Bhakti/Documents/GitHub/DebugMate/schema.sql;
+```
 
-## Start the application
+Then exit MySQL with `exit`. Configure `DB_USER` and `DB_PASSWORD` with an account that can connect to `debugmate_db` and read/write its history table. The setup account may be different from the application account.
 
-With dependencies installed and environment variables set, run:
+## Run DebugMate
+
+With dependencies installed, MySQL running, the schema created, and environment variables set:
 
 ```powershell
 python app.py
 ```
 
-Open `http://127.0.0.1:5000/` in a browser. The other pages are `/history` and `/dashboard`. The current entry point enables Flask's development debug mode, so use it only on a local development machine; do not expose this development server to the public Internet.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Use the left navigation to open **Overview**, **Analyze Error**, or **History**.
 
-If MySQL is unavailable, the app is designed to display a friendly database message. History and dashboard data will not be available until configuration and connectivity work.
+The current entry point runs Flask with `debug=True`, intended only for local development. Do not expose this development server to the public Internet. If database settings are missing or MySQL is unreachable, the app displays a database notice. Diagnosis remains separate from database storage.
 
-## Tests
+## Run the tests
 
-Run the full suite from the project folder:
+From the project folder, run:
 
 ```powershell
 python -m unittest discover -s tests -v
 ```
 
-`test_diagnosis.py` exercises the rule engine. `test_database.py` uses mocks and does not need a live MySQL server. `test_app.py` exercises Flask routes and does not need MySQL because its database calls are patched in route cases; it does require Flask to be installed. A skipped test is not a passing verification of that behavior. Check the command output for skips and failures.
+- `test_diagnosis.py` covers supported exceptions, traceback extraction, unknown errors, empty input, and malformed tracebacks.
+- `test_database.py` checks parameterized SQL calls, history limits, dashboard summaries, connection settings, and cleanup using mocks. It does not require a live MySQL server.
+- `test_app.py` covers Flask routes, form behavior, and safe rendering. Flask must be installed for these tests to run; skipped route tests have not verified the web pages.
 
-## Current verification caveat
+Review the command output for failures and skips. Mock-based tests do not prove that a live MySQL server, credentials, schema, and connector work together. The project has not been tested against your database unless you run it with your own configured MySQL instance.
 
-At the time the project report was prepared, the available Python environment did not have Flask installed. The most recent full test run discovered 22 tests: 12 passed, and 10 Flask route tests were skipped. The passing tests included all seven diagnosis tests and all five mocked database tests. No live MySQL server or installed connector was used to verify a database connection. See `docs/project_report.md` for the exact recorded result and limitations.
+## How diagnosis and storage work
+
+1. The browser submits the form to Flask with POST.
+2. Flask passes the submitted text to `diagnosis.diagnose()`.
+3. The diagnosis engine returns a status, detected type (when available), explanation, likely causes, and suggested fix. It inspects text only.
+4. For non-empty input, Flask asks `database.save_analysis()` to store the result. SQL values are passed separately using MySQL Connector placeholders.
+5. Overview and History request saved rows and counts from the database module. Jinja templates render dynamic text with HTML escaping enabled.
+
+The engine supports a defined set of patterns. It may not identify the root cause if an error message is incomplete or unusual, so treat its output as a learning aid and check the traceback and course materials.
