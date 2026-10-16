@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block crumb_label %}History{% endblock %}
+{% block page_title %}Analysis history{% endblock %}
+{% block page_description %}Review recent errors, diagnosis status, and suggested next steps.{% endblock %}
+{% block page_action %}<a class="btn btn-primary app-primary-button" href="{{ url_for('home') }}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.5v13M3.5 10h13"/></svg>Analyze new error</a>{% endblock %}
+{% block content %}
+  {% if database_message %}<div class="alert alert-warning app-alert" role="status"><strong>History unavailable.</strong> {{ database_message }}</div>{% endif %}
+  {% if analyses %}
+    <section class="panel history-panel" aria-labelledby="history-list-title">
+      <div class="panel-heading history-controls"><div><h2 id="history-list-title">Recent submissions</h2><p>Showing up to 50 of the newest saved analyses.</p></div><div class="search-box"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><label class="visually-hidden" for="history-search">Search history</label><input type="search" id="history-search" class="form-control" placeholder="Search history" autocomplete="off"></div></div>
+      <div class="table-responsive"><table class="table data-table history-table mb-0"><thead><tr><th scope="col">Error type</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col">Details</th></tr></thead><tbody id="history-rows">
+        {% for row in analyses %}<tr class="history-row" data-filter="{{ (row.error_type or 'Unidentified') ~ ' ' ~ row.status ~ ' ' ~ row.error_text }}"><td><strong>{{ row.error_type or 'Unidentified' }}</strong><small>{{ row.error_text|truncate(72, true, '…') }}</small></td><td><span class="table-status status-{{ row.status }}">{{ row.status|replace('_', ' ')|title }}</span></td><td class="timestamp-cell">{{ row.created_at }}</td><td><details class="inspect-details"><summary>Inspect</summary><div class="inspect-content"><h3>Submitted error</h3><pre>{{ row.error_text }}</pre><h3>Explanation</h3><p>{{ row.explanation }}</p><h3>Suggested next step</h3><p>{{ row.suggested_fix }}</p></div></details></td></tr>{% endfor %}
+      </tbody></table></div>
+      <p class="filter-empty" id="filter-empty" hidden>No history entries match your search.</p>
+      <div class="table-footer"><span>Recent records are ordered newest first.</span><span id="visible-count" aria-live="polite">{{ analyses|length }} records</span></div>
+    </section>
+  {% elif not database_message %}
+    <section class="panel empty-state history-empty"><span class="empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A2.5 2.5 0 0 1 19.5 7v13H4.5V7A2.5 2.5 0 0 1 7 4.5Z"/><path d="M8 10h8M8 14h5"/></svg></span><h2>No analyses have been saved yet</h2><p>When you analyze an error, it will be available here for review.</p><a class="btn btn-primary app-primary-button" href="{{ url_for('home') }}">Analyze your first error</a></section>
+  {% endif %}
+{% endblock %}
+{% block scripts %}{% if analyses %}<script src="{{ url_for('static', filename='js/history.js') }}" defer></script>{% endif %}{% endblock %}
