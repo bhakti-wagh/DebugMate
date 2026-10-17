@@ -1,36 +1,51 @@
 {% extends "base.html" %}
-{% block title %}Analyze Error{% endblock %}
-{% block crumb_label %}Analyze Error{% endblock %}
-{% block page_title %}Analyze an error{% endblock %}
-{% block page_description %}Turn a Python traceback into a clear explanation and a practical next step.{% endblock %}
+{% block title %}Analyze Python Code{% endblock %}
+{% block crumb_label %}Analyze Python Code{% endblock %}
+{% block page_title %}Analyze Python code{% endblock %}
+{% block page_description %}Review common, statically detectable Python issues with beginner-friendly explanations.{% endblock %}
 {% block content %}
   {% if database_message %}<div class="alert alert-warning app-alert" role="status"><strong>History unavailable.</strong> {{ database_message }}</div>{% endif %}
   <section class="panel analyze-panel" aria-labelledby="input-heading">
-    <div class="panel-heading"><div><span class="section-index">01</span><h2 id="input-heading">Paste your error</h2><p>Use the complete traceback when possible. The final line usually contains the exception type.</p></div><span class="text-badge">TEXT ONLY</span></div>
+    <div class="panel-heading"><div><span class="section-index">01</span><h2 id="input-heading">Paste your Python code</h2><p>Paste a complete file or a smaller section. Indentation and line breaks are preserved.</p></div><span class="text-badge">STATIC ANALYSIS</span></div>
     <form method="post" action="{{ url_for('home') }}" id="diagnosis-form">
-      <label for="error_text" class="form-label">Python error message or traceback</label>
-      <textarea class="form-control code-input" id="error_text" name="error_text" rows="11" spellcheck="false" placeholder="Traceback (most recent call last):&#10;  File &quot;example.py&quot;, line 4, in &lt;module&gt;&#10;    print(total)&#10;NameError: name 'total' is not defined" aria-describedby="input-help">{{ error_text }}</textarea>
-      <div class="input-meta"><span id="input-help">Paste the error output exactly as Python displayed it.</span><span class="input-language"><span class="language-dot"></span>Python traceback</span></div>
-      <div class="form-actions"><button type="submit" class="btn btn-primary app-primary-button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>Analyze Error</button><button type="reset" class="btn btn-link clear-button">Clear input</button></div>
+      <label for="error_text" class="form-label">Paste your Python code</label>
+      <textarea class="form-control code-input" id="error_text" name="error_text" rows="14" spellcheck="false" placeholder="def calculate():&#10;    total = 10&#10;    print(result)&#10;    value = total / 0" aria-describedby="input-help">{{ error_text }}</textarea>
+      <div class="input-meta"><span id="input-help">Use spaces to indent blocks, just as in your Python editor.</span><span class="input-language"><span class="language-dot"></span>Python source</span></div>
+      <div class="form-actions"><button type="submit" class="btn btn-primary app-primary-button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>Analyze Code</button><button type="reset" class="btn btn-link clear-button">Clear Input</button></div>
     </form>
-    <div class="privacy-note"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="8" width="12" height="9" rx="2"/><path d="M6.5 8V5.8a3.5 3.5 0 0 1 7 0V8M10 11v3"/></svg><span><strong>Private by design.</strong> Submitted content is treated as text. DebugMate never executes your code.</span></div>
+    <div class="privacy-note"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="8" width="12" height="9" rx="2"/><path d="M6.5 8V5.8a3.5 3.5 0 0 1 7 0V8M10 11v3"/></svg><span><strong>Safe static analysis.</strong> DebugMate parses your code as text and never executes or imports it.</span></div>
   </section>
   {% if result %}
   <section class="results-section" aria-labelledby="results-heading" aria-live="polite">
-    <div class="results-heading"><div><span class="section-index">02</span><h2 id="results-heading">Analysis results</h2></div><span class="status-pill status-{{ result.status }}"><span class="status-dot"></span>{{ result.status|replace('_', ' ')|title }}</span></div>
+    <div class="results-heading"><div><span class="section-index">02</span><h2 id="results-heading">Code analysis results</h2></div><span class="status-pill status-{{ result.status }}"><span class="status-dot"></span>{{ result.summary }}</span></div>
     {% if result.status == 'invalid' %}
-      <div class="result-notice notice-warning" role="alert"><strong>Please add an error message to continue.</strong><span>{{ result.explanation }}</span></div>
-    {% elif result.status == 'malformed' %}
-      <div class="result-notice notice-warning" role="status"><strong>Traceback looks incomplete.</strong><span>{{ result.explanation }}</span><span class="next-step"><b>Try this:</b> {{ result.suggested_fix }}</span></div>
-    {% elif result.status == 'unknown' %}
-      <div class="result-notice notice-violet" role="status"><strong>No matching rule found.</strong><span>{{ result.explanation }}</span>{% if result.error_type %}<span>Detected type: <code>{{ result.error_type }}</code></span>{% endif %}<span class="next-step"><b>Try this:</b> {{ result.suggested_fix }}</span></div>
+      <div class="result-notice notice-warning" role="alert"><strong>Please add Python code to continue.</strong><span>{{ result.explanation }}</span></div>
+    {% elif result.status == 'syntax_error' %}
+      <div class="result-notice notice-warning" role="alert"><strong>Syntax error{% if result.issues[0].line %} on line {{ result.issues[0].line }}{% endif %}{% if result.issues[0].column %}, column {{ result.issues[0].column }}{% endif %}.</strong><span>{{ result.issues[0].explanation }}</span><span class="next-step"><b>Suggested correction:</b> {{ result.issues[0].suggested_fix }}</span>{% if result.issues[0].code %}<pre class="issue-code"><code>{{ result.issues[0].code }}</code></pre>{% endif %}</div>
+    {% elif result.status == 'analysis_failed' %}
+      <div class="result-notice notice-warning" role="alert"><strong>Analysis could not be completed.</strong><span>{{ result.explanation }}</span><span class="next-step"><b>Try this:</b> {{ result.issues[0].suggested_fix }}</span></div>
     {% else %}
-      <div class="diagnosis-summary"><div class="diagnosis-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 20 7v5c0 4.4-3.2 7.5-8 9-4.8-1.5-8-4.6-8-9V7l8-3.5Z"/><path d="m8.5 12 2.3 2.3 4.7-5"/></svg></div><div><span class="field-label">DETECTED ERROR TYPE</span><h3>{{ result.error_type }}</h3>{% if result.message %}<p class="detected-message"><code>{{ result.message }}</code></p>{% endif %}</div></div>
-      <div class="result-grid">
-        <article class="result-card"><div class="result-card-heading"><span class="result-marker marker-blue">i</span><h3>What it means</h3></div><p>{{ result.explanation }}</p></article>
-        <article class="result-card"><div class="result-card-heading"><span class="result-marker marker-violet">?</span><h3>Likely causes</h3></div><ul>{% for cause in result.likely_causes %}<li>{{ cause }}</li>{% endfor %}</ul></article>
-        <article class="result-card fix-card"><div class="result-card-heading"><span class="result-marker marker-green">↗</span><h3>Suggested next step</h3></div><p>{{ result.suggested_fix }}</p><span class="hint-label">LEARNING HINT</span></article>
+      <div class="analysis-summary-grid" aria-label="Analysis counts">
+        <article class="metric-card"><span>Total detected issues</span><strong>{{ result.issue_count }}</strong></article>
+        <article class="metric-card"><span>Errors</span><strong>{{ result.error_count }}</strong></article>
+        <article class="metric-card"><span>Warnings</span><strong>{{ result.warning_count }}</strong></article>
       </div>
+      {% if result.issues %}
+        <div class="static-issue-list">
+        {% for issue in result.issues %}
+          <article class="panel static-issue" aria-labelledby="issue-{{ loop.index }}">
+            <div class="issue-heading"><div><span class="issue-number">{{ loop.index }}</span><h3 id="issue-{{ loop.index }}">{{ issue.category }}</h3></div><span class="table-status status-{{ issue.severity }}">{{ issue.severity|title }}</span></div>
+            {% if issue.line %}<p class="issue-location">Line {{ issue.line }}{% if issue.column %}, column {{ issue.column }}{% endif %}</p>{% endif %}
+            {% if issue.code %}<pre class="issue-code"><code>{{ issue.code }}</code></pre>{% endif %}
+            <p>{{ issue.explanation }}</p>
+            <p><strong>Suggested fix:</strong> {{ issue.suggested_fix }}</p>
+            {% if issue.corrected_code %}<div class="corrected-example"><strong>Possible correction</strong><pre class="issue-code"><code>{{ issue.corrected_code }}</code></pre></div>{% endif %}
+          </article>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="result-notice notice-success" role="status"><strong>No issues detected by the current rules.</strong><span>Static checks cannot prove that a program is correct. Review and test your code as usual.</span></div>
+      {% endif %}
     {% endif %}
   </section>
   {% endif %}

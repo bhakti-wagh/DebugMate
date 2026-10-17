@@ -1,28 +1,29 @@
 # DebugMate
 
-### Python Error Diagnosis and Learning Assistant
+### Python Code Analysis and Learning Assistant
 
-DebugMate is a beginner-friendly web application for understanding common Python errors. Paste an exception message or traceback to see a rule-based explanation, likely causes, and a suggested next step. When MySQL is configured, DebugMate also saves analysis history and displays a dashboard.
+DebugMate is a beginner-friendly web application that checks pasted Python source code for a small set of statically detectable issues. It uses Python's built-in AST parser and readable rules to show issue counts, line numbers, explanations, and suggested next steps. When MySQL is configured, DebugMate also saves analysis history and displays dashboard metrics.
 
 This is a student learning project. Its suggestions are educational hints, not guaranteed fixes. The project does not claim official NSDC approval or certification.
 
 ## What it does
 
-- Recognizes `NameError`, `TypeError`, `ValueError`, `IndexError`, `KeyError`, `ZeroDivisionError`, `AttributeError`, `ImportError`, `ModuleNotFoundError`, and `SyntaxError`.
-- Extracts a supported exception name and message from pasted traceback text when possible.
-- Gives separate responses for empty input, malformed tracebacks, and errors without a matching rule.
+- Parses Python source without executing, importing, or evaluating it.
+- Detects syntax errors, common undefined names, likely use-before-assignment, literal division by zero, obvious literal type mismatches, known out-of-range sequence indexes, known missing literal dictionary keys, and a narrow factorial accumulator mistake.
+- Shows issue totals, error and warning counts, source lines, beginner-friendly explanations, and suggested corrections.
+- Handles empty and oversized submissions with clear status messages, and caps displayed findings at 100 plus a notice.
 - Shows an analysis form, an Overview dashboard, and a searchable recent History page.
-- Stores non-empty diagnoses in MySQL, including unknown and malformed results. Empty or invalid submissions are not saved.
+- Stores non-empty submissions and a compact analysis summary in MySQL. Detailed findings appear on the result page; the current history schema does not store a separate structured record for each finding. Empty submissions are not saved.
 - Uses parameterized SQL and reads database settings from environment variables.
 - Treats submitted content as text. It never runs, evaluates, compiles, or imports user-submitted code.
-- Shows a useful message when the database is unavailable; diagnosis can still be displayed, but it cannot be saved at that time.
+- Shows a useful message when the database is unavailable; analysis can still be displayed, but it cannot be saved at that time.
 
 ## Pages
 
 | Page | URL | Purpose |
 | --- | --- | --- |
-| Overview | `/dashboard` | Database-backed totals, recognized and uncertain counts, an error-type breakdown, and recent analyses. |
-| Analyze Error | `/` | Accepts an error message or traceback through a POST form and displays the diagnosis. |
+| Overview | `/dashboard` | Database-backed totals, successfully analyzed and uncertain counts, an issue-category breakdown, and recent analyses. |
+| Analyze Code | `/` | Accepts Python source through a POST form and displays static-analysis findings. |
 | History | `/history` | Shows up to 50 recent analyses, with client-side search and expandable details. |
 
 ## Built with
@@ -39,6 +40,7 @@ This is a student learning project. Its suggestions are educational hints, not g
 DebugMate/
 |-- app.py                  # Flask application factory and routes
 |-- diagnosis.py            # Standalone rule-based diagnosis engine
+|-- static_analyzer.py      # Safe AST-based code checks; does not execute source
 |-- database.py             # Environment-based MySQL connection and queries
 |-- requirements.txt        # Python package requirements
 |-- schema.sql              # Creates debugmate_db and debug_history
@@ -57,11 +59,12 @@ DebugMate/
 |   |-- base.html           # Shared navigation and page layout
 |   |-- dashboard.html      # Overview dashboard
 |   |-- history.html        # Recent analysis history
-|   `-- index.html          # Error form and diagnosis results
+|   `-- index.html          # Error form and analysis results
 `-- tests/
     |-- test_app.py         # Flask route tests
     |-- test_database.py    # Database tests using mocks
-    `-- test_diagnosis.py   # Diagnosis engine tests
+    |-- test_diagnosis.py   # Original exception-message diagnosis tests
+    `-- test_static_analyzer.py # Code analysis tests
 ```
 
 ## Set up the project
@@ -132,7 +135,7 @@ With dependencies installed, MySQL running, the schema created, and environment 
 python app.py
 ```
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Use the left navigation to open **Overview**, **Analyze Error**, or **History**.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Use the left navigation to open **Overview**, **Analyze Code**, or **History**.
 
 The current entry point runs Flask with `debug=True`, intended only for local development. Do not expose this development server to the public Internet. If database settings are missing or MySQL is unreachable, the app displays a database notice. Diagnosis remains separate from database storage.
 
@@ -144,7 +147,8 @@ From the project folder, run:
 python -m unittest discover -s tests -v
 ```
 
-- `test_diagnosis.py` covers supported exceptions, traceback extraction, unknown errors, empty input, and malformed tracebacks.
+- `test_static_analyzer.py` covers findings, syntax errors, invalid/large input, and common false-positive cases.
+- `test_diagnosis.py` continues to test the original standalone exception-message diagnosis module.
 - `test_database.py` checks parameterized SQL calls, history limits, dashboard summaries, connection settings, and cleanup using mocks. It does not require a live MySQL server.
 - `test_app.py` covers Flask routes, form behavior, and safe rendering. Flask must be installed for these tests to run; skipped route tests have not verified the web pages.
 
@@ -153,9 +157,11 @@ Review the command output for failures and skips. Mock-based tests do not prove 
 ## How diagnosis and storage work
 
 1. The browser submits the form to Flask with POST.
-2. Flask passes the submitted text to `diagnosis.diagnose()`.
-3. The diagnosis engine returns a status, detected type (when available), explanation, likely causes, and suggested fix. It inspects text only.
-4. For non-empty input, Flask asks `database.save_analysis()` to store the result. SQL values are passed separately using MySQL Connector placeholders.
+2. Flask passes the submitted source text to `static_analyzer.analyze_code()`.
+3. The analyzer parses the text into an AST and applies conservative checks; it never executes or imports the submission.
+4. For non-empty input, Flask asks `database.save_analysis()` to store the source and a compact summary. SQL values are passed separately using MySQL Connector placeholders.
 5. Overview and History request saved rows and counts from the database module. Jinja templates render dynamic text with HTML escaping enabled.
 
-The engine supports a defined set of patterns. It may not identify the root cause if an error message is incomplete or unusual, so treat its output as a learning aid and check the traceback and course materials.
+## Static-analysis limitations
+
+Static analysis inspects source structure without running it. It cannot know every value or execution path, so DebugMate can miss real problems and some warnings may not apply on every path. Undefined-name checking is intentionally basic and can be incomplete around dynamic attributes, complex imports, closures, conditional assignments, and comprehension scopes. Type checking is limited to obvious literal mismatches. Index and dictionary checks only apply when their literal contents are known. Factorial detection uses a narrow naming-and-pattern rule. A clean result means only that the current rules found no issue; it does not prove the program is correct. Syntax errors stop the AST-based checks because Python cannot build a normal syntax tree from invalid source.

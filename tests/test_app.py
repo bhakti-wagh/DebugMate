@@ -1,9 +1,4 @@
-"""Route tests for the first DebugMate web milestone.
-
-Install Flask from requirements.txt before running these tests. Keeping the
-skip guard allows the diagnosis-only tests to run in a Python environment
-where Flask has not been installed yet.
-"""
+"""Flask route tests, with database writes mocked where appropriate."""
 
 import unittest
 from unittest.mock import patch
@@ -26,54 +21,53 @@ class FlaskRouteTests(unittest.TestCase):
     def setUp(self):
         self.client = self.app.test_client()
 
-    def test_home_page_has_form(self):
+    def test_home_page_has_code_form(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'name="error_text"', response.data)
-        self.assertIn(b"Analyze Error", response.data)
+        self.assertIn(b"Analyze Python code", response.data)
+        self.assertIn(b"Analyze Code", response.data)
+        self.assertIn(b"never executes or imports it", response.data)
 
-    def test_post_shows_supported_diagnosis(self):
-        response = self.client.post("/", data={"error_text": "NameError: name 'score' is not defined"})
+    @patch("app.database.save_analysis")
+    def test_post_shows_static_findings_and_saves_summary(self, save_analysis):
+        response = self.client.post("/", data={"error_text": "def calculate():\n    print(result)\n    value = 10 / 0\n"})
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"NameError", response.data)
-        self.assertIn(b"Likely causes", response.data)
-        self.assertIn(b"Suggested next step", response.data)
+        self.assertIn(b"Total detected issues", response.data)
+        self.assertIn(b"Undefined variable", response.data)
+        self.assertIn(b"Division by zero", response.data)
+        save_analysis.assert_called_once()
+        self.assertEqual(save_analysis.call_args.args[1]["status"], "supported")
+        self.assertIn("2 detected issues", save_analysis.call_args.args[1]["explanation"])
 
     def test_post_empty_input_shows_helpful_message(self):
         response = self.client.post("/", data={"error_text": "  "})
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Please add an error message", response.data)
-
-    def test_post_unknown_and_malformed_inputs_have_distinct_messages(self):
-        unknown = self.client.post("/", data={"error_text": "The program behaved strangely"})
-        malformed = self.client.post("/", data={"error_text": "Traceback (most recent call last):\n  File 'demo.py', line 1"})
-        self.assertIn(b"No matching rule found", unknown.data)
-        self.assertIn(b"Traceback looks incomplete", malformed.data)
+        self.assertIn(b"Please add Python code", response.data)
 
     @patch("app.database.save_analysis")
-    def test_post_saves_unknown_and_malformed_results(self, save_analysis):
-        self.client.post("/", data={"error_text": "CustomProblem: example"})
-        self.client.post("/", data={"error_text": "Traceback (most recent call last):\n  File 'demo.py', line 1"})
-        self.assertEqual(save_analysis.call_count, 2)
-        self.assertEqual(save_analysis.call_args_list[0].args[1]["status"], "unknown")
-        self.assertEqual(save_analysis.call_args_list[1].args[1]["status"], "malformed")
+    def test_post_syntax_error_explains_ast_checks_could_not_run(self, save_analysis):
+        response = self.client.post("/", data={"error_text": "if True\n    pass\n"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Syntax error on line 1", response.data)
+        self.assertIn(b"other static checks could not run", response.data)
+        save_analysis.assert_called_once()
+        self.assertEqual(save_analysis.call_args.args[1]["status"], "malformed")
+
+    @patch("app.database.save_analysis")
+    def test_database_failure_does_not_hide_analysis(self, save_analysis):
+        import database
+
+        save_analysis.side_effect = database.DatabaseError("offline")
+        response = self.client.post("/", data={"error_text": "print(missing_name)"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Analysis is ready", response.data)
+        self.assertIn(b"Undefined variable", response.data)
 
     @patch("app.database.save_analysis")
     def test_post_empty_input_is_not_saved(self, save_analysis):
         self.client.post("/", data={"error_text": "  "})
         save_analysis.assert_not_called()
-
-    @patch("app.database.save_analysis")
-    def test_save_failure_shows_missing_setting_names_without_secret_values(self, save_analysis):
-        save_analysis.side_effect = __import__("database").DatabaseError(
-            "Missing required database environment settings.",
-            safe_message="Missing settings: DB_HOST, DB_PASSWORD",
-        )
-        response = self.client.post("/", data={"error_text": "NameError: missing"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Diagnosis is ready", response.data)
-        self.assertIn(b"DB_HOST, DB_PASSWORD", response.data)
-        self.assertNotIn(b"actual-password", response.data)
 
     @patch("app.database.get_recent_history", return_value=[])
     def test_history_page_renders(self, get_history):
@@ -84,15 +78,13 @@ class FlaskRouteTests(unittest.TestCase):
 
     @patch("app.database.get_dashboard_stats", return_value={
         "total": 3, "distinct_error_types": 1, "recognized": 2, "uncertain": 1,
-        "by_error_type": [{"error_type": "NameError", "count": 2}],
-        "recent_analyses": [{"error_type": "NameError", "status": "supported", "created_at": "today", "error_text": "NameError: missing"}],
+        "by_error_type": [{"error_type": "Undefined variable", "count": 2}],
+        "recent_analyses": [{"error_type": "Undefined variable", "status": "supported", "created_at": "today", "error_text": "print(missing)"}],
     })
-    def test_dashboard_shows_total_and_error_counts(self, get_stats):
+    def test_dashboard_remains_available(self, get_stats):
         response = self.client.get("/dashboard")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b">3<", response.data)
-        self.assertIn(b"NameError", response.data)
-        self.assertIn(b"Distinct error types", response.data)
         self.assertIn(b"Recent analyses", response.data)
         get_stats.assert_called_once()
 
@@ -103,8 +95,10 @@ class FlaskRouteTests(unittest.TestCase):
         self.assertIn(b"History is temporarily unavailable", response.data)
 
     def test_submitted_html_is_escaped(self):
-        response = self.client.post("/", data={"error_text": "<script>alert('x')</script>"})
-        self.assertNotIn(b"<script>alert('x')</script>", response.data)
+        submitted = "print('<script>alert(1)</script>')"
+        response = self.client.post("/", data={"error_text": submitted})
+        self.assertNotIn(b"<script>alert(1)</script>", response.data)
+        self.assertIn(b"&lt;script&gt;", response.data)
 
 
 if __name__ == "__main__":

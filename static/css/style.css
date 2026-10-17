@@ -176,6 +176,22 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .result-notice strong { font-size: 13px; }
 .notice-warning { border-color: #f0dfbf; background: #fffaf1; color: #725521; }
 .notice-violet { border-color: #e4def8; background: #faf8ff; color: #5f507f; }
+.notice-success { border-color: #cde9dd; background: #f3fbf7; color: #28664f; }
+.analysis-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.analysis-summary-grid .metric-card { min-height: 82px; padding: 14px 17px; }
+.analysis-summary-grid .metric-card strong { display: block; margin-top: 6px; font-size: 22px; }
+.static-issue-list { display: grid; gap: 12px; }
+.static-issue { padding: 17px 19px; overflow: hidden; }
+.issue-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.issue-heading > div { display: flex; align-items: center; gap: 9px; }
+.issue-heading h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.issue-number { display: inline-grid; width: 25px; height: 25px; place-items: center; border-radius: 8px; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 700; }
+.issue-location { margin: 8px 0; color: var(--muted); font-size: 11px; }
+.issue-code { max-width: 100%; margin: 9px 0 12px; padding: 11px 13px; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: #f8f9fc; color: #293650; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.static-issue > p { margin: 8px 0 0; color: #59667e; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.corrected-example { margin-top: 12px; color: #53617a; font-size: 11px; }
+.static-issue .table-status.status-error { background: #fff0ee; color: #a94336; }
+.static-issue .table-status.status-warning { background: #fff7e9; color: #946317; }
 .next-step { padding-top: 5px; border-top: 1px solid rgba(90, 85, 120, .12); }
 .app-alert { margin-bottom: 16px; border-radius: 9px; font-size: 11px; }
 
@@ -245,6 +261,10 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   .page-heading-action { align-self: stretch; }
   .page-heading-action .app-primary-button { width: 100%; }
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .analysis-summary-grid { gap: 7px; }
+  .analysis-summary-grid .metric-card { min-height: 72px; padding: 11px 9px; font-size: 10px; }
+  .analysis-summary-grid .metric-card strong { font-size: 18px; }
+  .static-issue { padding: 14px; }
   .metric-card > small { font-size: 9px; }
   .metric-top { align-items: flex-start; }
   .metric-icon { flex: 0 0 27px; }

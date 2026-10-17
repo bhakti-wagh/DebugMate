@@ -1,8 +1,8 @@
-"""Flask entry point for the DebugMate diagnosis page."""
+"""Flask entry point for the DebugMate static code analyzer."""
 
 from flask import Flask, render_template, request
 
-from diagnosis import diagnose
+from static_analyzer import analyze_code
 import database
 
 
@@ -18,16 +18,20 @@ def create_app():
 
         if request.method == "POST":
             error_text = request.form.get("error_text", "")
-            # The diagnosis engine reads this string as text; it never runs it.
-            result = diagnose(error_text)
+            # The analyzer parses source into an AST; it never runs it.
+            result = analyze_code(error_text)
             # Empty submissions are validation feedback, not useful history.
             if result["status"] != "invalid":
                 try:
-                    database.save_analysis(error_text, result)
+                    # The existing schema stores one summary row. Map richer
+                    # analyzer states to the two existing dashboard groups.
+                    saved_result = dict(result)
+                    saved_result["status"] = result["history_status"]
+                    database.save_analysis(error_text, saved_result)
                 except database.DatabaseError as exc:
                     # Keep the diagnosis available even if history storage is down.
                     database_message = (
-                        "Diagnosis is ready, but DebugMate could not save it to history."
+                        "Analysis is ready, but DebugMate could not save it to history."
                         + _safe_database_detail(exc)
                         + " Check the database settings and try again later."
                     )

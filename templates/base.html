@@ -24,7 +24,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg><span>Overview</span>
         </a>
         <a class="nav-link{% if active_page == 'analyze' %} active{% endif %}" href="{{ url_for('home') }}"{% if active_page == 'analyze' %} aria-current="page"{% endif %}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5h-2A2.5 2.5 0 0 0 4 8v10a2.5 2.5 0 0 0 2.5 2.5h11A2.5 2.5 0 0 0 20 18V8a2.5 2.5 0 0 0-2.5-2.5h-2"/><path d="M9 3.5h6v4H9zM8 13l2.2 2.2L16 9.5"/></svg><span>Analyze Error</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5h-2A2.5 2.5 0 0 0 4 8v10a2.5 2.5 0 0 0 2.5 2.5h11A2.5 2.5 0 0 0 20 18V8a2.5 2.5 0 0 0-2.5-2.5h-2"/><path d="M9 3.5h6v4H9zM8 13l2.2 2.2L16 9.5"/></svg><span>Analyze Code</span>
         </a>
         <a class="nav-link{% if active_page == 'history' %} active{% endif %}" href="{{ url_for('history') }}"{% if active_page == 'history' %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h16M4 12h16M4 16.5h10"/><circle cx="18" cy="17" r="3.5"/><path d="M18 15v2l1.2.8"/></svg><span>History</span>
@@ -36,13 +36,13 @@
     <div class="workspace">
       <header class="topbar">
         <div class="mobile-brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M9 7.5h14a2.5 2.5 0 0 1 2.5 2.5v12a2.5 2.5 0 0 1-2.5 2.5H9A2.5 2.5 0 0 1 6.5 22V10A2.5 2.5 0 0 1 9 7.5Z" stroke="currentColor" stroke-width="1.8"/><path d="m12 13 3 3-3 3m6 0h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>DebugMate</strong></div>
-        <div class="topbar-context"><span class="topbar-kicker">PYTHON ERROR ASSISTANT</span><span>Built for clearer debugging</span></div>
+        <div class="topbar-context"><span class="topbar-kicker">PYTHON CODE ANALYZER</span><span>Built for clearer debugging</span></div>
         <div class="topbar-indicator"><span class="status-dot"></span><span>Local workspace</span></div>
       </header>
       <main class="main-content">
         <div class="page-heading"><div>{% block breadcrumb %}<p class="breadcrumb-line"><a href="{{ url_for('dashboard') }}">Workspace</a><span>/</span>{% block crumb_label %}{% endblock %}</p>{% endblock %}<h1>{% block page_title %}{% endblock %}</h1><p class="page-description">{% block page_description %}{% endblock %}</p></div><div class="page-heading-action">{% block page_action %}{% endblock %}</div></div>
         {% block content %}{% endblock %}
-        <footer class="page-footer"><span>DebugMate · Python Error Diagnosis and Learning Assistant</span><span>Text-based rules · Submitted code is never executed</span></footer>
+        <footer class="page-footer"><span>DebugMate · Python Code Analysis and Learning Assistant</span><span>Static rules · Submitted code is never executed</span></footer>
       </main>
     </div>
   </div>
