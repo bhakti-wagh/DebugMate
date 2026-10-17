@@ -286,3 +286,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Small refinements for the demonstration workspace */
+.main-content { padding-top: 39px; }
+.page-heading h1 { font-size: clamp(27px, 2.2vw, 32px); }
+.metric-card, .panel { box-shadow: 0 4px 16px rgba(25, 43, 79, .045); }
+.metric-card:hover { border-color: #d7e0f5; }
+.data-table tbody tr:hover { background: #f8faff; }
+.code-input { tab-size: 4; }
+.history-panel .table-responsive { max-width: 100%; }
+@media (max-width: 700px) {
+  .main-content { padding-top: 24px; }
+  .page-heading h1 { font-size: 24px; }
+}

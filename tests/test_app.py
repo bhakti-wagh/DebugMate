@@ -78,6 +78,7 @@ class FlaskRouteTests(unittest.TestCase):
 
     @patch("app.database.get_dashboard_stats", return_value={
         "total": 3, "distinct_error_types": 1, "recognized": 2, "uncertain": 1,
+        "total_issues": 5, "issue_count_records": 2, "recent": 1,
         "by_error_type": [{"error_type": "Undefined variable", "count": 2}],
         "recent_analyses": [{"error_type": "Undefined variable", "status": "supported", "created_at": "today", "error_text": "print(missing)"}],
     })

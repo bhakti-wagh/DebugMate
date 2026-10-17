@@ -5,6 +5,7 @@ stores it. Database settings are read from the process environment.
 """
 
 import os
+import re
 
 
 class DatabaseError(Exception):
@@ -92,7 +93,16 @@ def get_dashboard_stats():
             """SELECT COUNT(*) AS total,
                       COUNT(DISTINCT error_type) AS distinct_error_types,
                       COALESCE(SUM(CASE WHEN status = 'supported' THEN 1 ELSE 0 END), 0) AS recognized,
-                      COALESCE(SUM(CASE WHEN status IN ('unknown', 'malformed') THEN 1 ELSE 0 END), 0) AS uncertain
+                      COALESCE(SUM(CASE WHEN status IN ('unknown', 'malformed') THEN 1 ELSE 0 END), 0) AS uncertain,
+                      COALESCE(SUM(CASE WHEN SUBSTRING_INDEX(explanation, ' ', 1) REGEXP '^[0-9]+$'
+                                         AND SUBSTRING_INDEX(explanation, ' ', 2) REGEXP '^[0-9]+ detected$'
+                                        THEN CAST(SUBSTRING_INDEX(explanation, ' ', 1) AS UNSIGNED)
+                                        ELSE 0 END), 0) AS total_issues,
+                      COALESCE(SUM(CASE WHEN SUBSTRING_INDEX(explanation, ' ', 1) REGEXP '^[0-9]+$'
+                                         AND SUBSTRING_INDEX(explanation, ' ', 2) REGEXP '^[0-9]+ detected$'
+                                        THEN 1 ELSE 0 END), 0) AS issue_count_records,
+                      COALESCE(SUM(CASE WHEN created_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 7 DAY)
+                                        THEN 1 ELSE 0 END), 0) AS recent
                FROM debug_history"""
         )
         summary = cursor.fetchone()
@@ -110,6 +120,9 @@ def get_dashboard_stats():
             "distinct_error_types": summary["distinct_error_types"],
             "recognized": summary["recognized"],
             "uncertain": summary["uncertain"],
+            "total_issues": summary["total_issues"],
+            "issue_count_records": summary["issue_count_records"],
+            "recent": summary["recent"],
             "by_error_type": by_error_type,
             "recent_analyses": recent_analyses,
         }
@@ -129,7 +142,18 @@ def _fetch_recent(cursor, limit):
              LIMIT %s"""
     bounded_limit = max(1, min(int(limit), 200))
     cursor.execute(sql, (bounded_limit,))
-    return cursor.fetchall()
+    rows = cursor.fetchall()
+    for row in rows:
+        row["issue_count"] = _issue_count_from_summary(row.get("explanation"))
+    return rows
+
+
+def _issue_count_from_summary(explanation):
+    """Read the count from summaries written by the static analyzer."""
+    if not isinstance(explanation, str):
+        return None
+    match = re.match(r"^(\d+) detected issues? \(", explanation)
+    return int(match.group(1)) if match else None
 
 
 def _close(resource):

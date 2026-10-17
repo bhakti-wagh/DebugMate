@@ -35,11 +35,18 @@ class DatabaseTests(unittest.TestCase):
     @patch("database.get_connection")
     def test_recent_history_uses_bounded_parameterized_limit(self, get_connection):
         get_connection.return_value = self.connection
-        self.cursor.fetchall.return_value = [{"error_type": "NameError"}]
+        self.cursor.fetchall.return_value = [{
+            "error_type": "NameError",
+            "explanation": "2 detected issues (1 error, 1 warning).",
+        }]
 
         rows = database.get_recent_history(limit=5000)
 
-        self.assertEqual(rows, [{"error_type": "NameError"}])
+        self.assertEqual(rows, [{
+            "error_type": "NameError",
+            "explanation": "2 detected issues (1 error, 1 warning).",
+            "issue_count": 2,
+        }])
         sql, values = self.cursor.execute.call_args.args
         self.assertIn("LIMIT %s", sql)
         self.assertEqual(values, (200,))
@@ -50,6 +57,7 @@ class DatabaseTests(unittest.TestCase):
         get_connection.return_value = self.connection
         self.cursor.fetchone.return_value = {
             "total": 4, "distinct_error_types": 2, "recognized": 3, "uncertain": 1,
+            "total_issues": 7, "issue_count_records": 3, "recent": 2,
         }
         self.cursor.fetchall.side_effect = [
             [
@@ -65,10 +73,17 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(stats["distinct_error_types"], 2)
         self.assertEqual(stats["recognized"], 3)
         self.assertEqual(stats["uncertain"], 1)
+        self.assertEqual(stats["total_issues"], 7)
+        self.assertEqual(stats["issue_count_records"], 3)
+        self.assertEqual(stats["recent"], 2)
         self.assertEqual(stats["by_error_type"][0]["error_type"], "NameError")
         self.assertEqual(stats["recent_analyses"][0]["error_type"], "NameError")
         self.assertEqual(self.cursor.execute.call_count, 3)
         self.connection.close.assert_called_once()
+
+    def test_issue_count_is_absent_for_legacy_or_non_analyzer_summaries(self):
+        self.assertIsNone(database._issue_count_from_summary("Analysis complete."))
+        self.assertIsNone(database._issue_count_from_summary(None))
 
     @patch("database.get_connection")
     def test_query_failure_becomes_database_error_and_closes_resources(self, get_connection):
